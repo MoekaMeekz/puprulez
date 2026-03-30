@@ -35,16 +35,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function randomPass() {
-    return Math.random().toString(36).substring(2,11).toUpperCase();
-}
-
 function createPage() {
-    const name = prompt('🌸 Page name:');
+    const name = prompt('🌸 Choose a Username (Rulepage Name):');
     if (!name || !name.trim()) return;
     
     const pageName = name.trim();
-    const password = randomPass();
+
+    // Check if rulepage already exists
+    if (localStorage.getItem(pageName + '_pass')) {
+        alert('❌ This name is already taken, princess! Try a different one. ✨');
+        return;
+    }
+
+    const password = prompt('🔑 Create a Password:');
+    if (!password) return;
+
     localStorage.setItem('currentPage', pageName);
     localStorage.setItem(pageName + '_pass', password);
     
@@ -52,10 +57,10 @@ function createPage() {
 }
 
 function editPage() {
-    const pageName = prompt('🌸 Enter your Page Name:');
+    const pageName = prompt('🌸 Enter Username:');
     if (!pageName) return;
 
-    const pass = prompt('🔓 9-char password:');
+    const pass = prompt('🔓 Enter Password:');
     const storedPass = localStorage.getItem(pageName + '_pass');
     
     if (storedPass && pass === storedPass) {
@@ -68,7 +73,8 @@ function editPage() {
 
 function showEditPage(pageName) {
     const pass = localStorage.getItem(pageName + '_pass');
-    const viewLink = location.pathname + '?view=' + encodeURIComponent(pageName) + '#' + pass;
+    // Generates full URL for GitHub Pages
+    const viewLink = window.location.origin + window.location.pathname + '?view=' + encodeURIComponent(pageName) + '#' + pass;
     localStorage.setItem('currentPage', pageName);
     
     document.querySelector('.container').innerHTML = `
