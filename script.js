@@ -107,7 +107,7 @@ function showEditPage(pageName) {
             </div>
             
             <div style="margin-top: 30px;">
-                <button onclick="savePage('${pageName}')" class="princess-btn" style="background:var(--deep-pink)">💖 SAVE CHANGES</button>
+                <button onclick="savePage('${pageName}', true)" class="princess-btn" style="background:var(--deep-pink)">💖 SAVE CHANGES</button>
                 <button onclick="location.href='?'" class="princess-btn" style="background:#aaa">🏰 Home</button>
             </div>
         </div>
@@ -169,7 +169,7 @@ function addItem(type) {
     }
 }
 
-function savePage(pageName) {
+function savePage(pageName, showAlert = false) {
     // More reliable selection using the span tag
     const rules = Array.from(document.querySelectorAll('#rulesList .rule-item span')).map(span => span.textContent.trim());
     const puns = Array.from(document.querySelectorAll('#punsList .punishment-item span')).map(span => span.textContent.trim());
@@ -177,6 +177,7 @@ function savePage(pageName) {
     localStorage.setItem(pageName + '_rules', JSON.stringify(rules));
     localStorage.setItem(pageName + '_puns', JSON.stringify(puns));
     console.log('Saved ' + pageName);
+    if (showAlert) alert('💖 Changes saved successfully, princess! ✨');
 }
 
 function loadLists(pageName) {
