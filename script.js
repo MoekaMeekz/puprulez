@@ -2,7 +2,7 @@
 
 // TODO: Replace with your Supabase Project URL and Anon Key
 const SUPABASE_URL = 'https://wtdutuviptkwdehdpzhu.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0ZHV0dXZpcHRrd2RlaGRwemh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4Mjg4NDQsImV4cCI6MjA5MDQwNDg0NH0.etJwipirdCaTEHS0G10yuBkbNESUark0T8DveeUUO4U';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0ZHV0dXZpcHRrd2RlaGRwemh1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDgyODg0NCwiZXhwIjoyMDkwNDA0ODQ0fQ.fkgFroBakxVmPTW36rGJouqvrj1ytSDFu2-ZvEikT20';
 
 const _supabase = window.supabase ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
