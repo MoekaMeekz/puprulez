@@ -6,7 +6,9 @@ const TURSO_TOKEN = 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOj
 
 async function runSQL(sql, args = []) {
     try {
-        const response = await fetch(`${TURSO_URL}/v2/pipeline`, {
+        // Ensure we are using the HTTPS endpoint for Turso pipeline
+        const url = TURSO_URL.replace('libsql://', 'https://') + '/v2/pipeline';
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${TURSO_TOKEN}`,
@@ -20,12 +22,15 @@ async function runSQL(sql, args = []) {
             })
         });
         const data = await response.json();
-        if (data.results && data.results[0].response.type === 'execute') {
-            return data.results[0].response.result;
+        const res = data.results?.[0]?.response;
+        if (res?.type === 'execute') {
+            return res.result;
+        } else if (res?.type === 'error') {
+            console.error('Database Query Error:', res.error.message);
         }
         return null;
     } catch (err) {
-        console.error('SQL Error:', err);
+        console.error('Network/SQL Error:', err);
         return null;
     }
 }
@@ -85,18 +90,13 @@ async function createPage() {
         if (!password) return;
 
         // Save to SQLite
-        const insertResult = await runSQL('INSERT INTO rulepages (name, pass, rules, puns) VALUES (?, ?, "[]", "[]")', [pageName, password]);
+        await runSQL('INSERT INTO rulepages (name, pass, rules, puns) VALUES (?, ?, "[]", "[]")', [pageName, password]);
         
-        if (insertResult === null && pageName) {
-            // If insertResult is null but we had no error thrown, it's possible the table doesn't exist
-            console.warn('Possible issue saving to database.');
-        }
-
         localStorage.setItem(pageName + '_pass', password);
         localStorage.setItem('currentPage', pageName);
         location.href = '?page=' + encodeURIComponent(pageName);
     } catch (err) {
-        alert('Failed to connect to the database. Please check your internet or database settings.');
+        alert('Database Error: Could not verify or create page. Check console for details.');
         console.error(err);
     }
 }
