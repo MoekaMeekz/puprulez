@@ -1,4 +1,11 @@
 // Puprulez - Complete with Home/Edit/View
+
+// TODO: Replace with your Supabase Project URL and Anon Key
+const SUPABASE_URL = 'https://wtdutuviptkwdehdpzhu.supabase.co';
+const SUPABASE_KEY = 'sb_secret_A98qptbJhwhDaV4f8LAWhQ_C88vHPAH';
+
+const _supabase = window.supabase ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
 document.addEventListener('DOMContentLoaded', function() {
     // Always show homepage first
     const container = document.querySelector('.container');
@@ -35,14 +42,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function createPage() {
+async function createPage() {
     const name = prompt('🌸 Choose a Username (Rulepage Name):');
     if (!name || !name.trim()) return;
     
     const pageName = name.trim();
 
-    // Check if rulepage already exists
-    if (localStorage.getItem(pageName + '_pass')) {
+    // Check if rulepage already exists in database
+    const { data: existing } = await _supabase.from('rulepages').select('name').eq('name', pageName).single();
+    
+    if (existing) {
         alert('❌ This name is already taken, princess! Try a different one. ✨');
         return;
     }
@@ -50,20 +59,31 @@ function createPage() {
     const password = prompt('🔑 Create a Password:');
     if (!password) return;
 
-    localStorage.setItem('currentPage', pageName);
+    // Save to Supabase
+    const { error } = await _supabase.from('rulepages').insert([
+        { name: pageName, pass: password, rules: [], puns: [] }
+    ]);
+
+    if (error) {
+        alert('❌ Error creating page: ' + error.message);
+        return;
+    }
+
     localStorage.setItem(pageName + '_pass', password);
-    
+    localStorage.setItem('currentPage', pageName);
     location.href = '?page=' + encodeURIComponent(pageName);
 }
 
-function editPage() {
+async function editPage() {
     const pageName = prompt('🌸 Enter Username:');
     if (!pageName) return;
 
     const pass = prompt('🔓 Enter Password:');
-    const storedPass = localStorage.getItem(pageName + '_pass');
     
-    if (storedPass && pass === storedPass) {
+    const { data: pageData } = await _supabase.from('rulepages').select('*').eq('name', pageName).single();
+    
+    if (pageData && pass === pageData.pass) {
+        localStorage.setItem(pageName + '_pass', pass);
         localStorage.setItem('currentPage', pageName);
         location.href = '?page=' + encodeURIComponent(pageName);
     } else {
@@ -71,8 +91,11 @@ function editPage() {
     }
 }
 
-function showEditPage(pageName) {
-    const pass = localStorage.getItem(pageName + '_pass');
+async function showEditPage(pageName) {
+    const { data: pageData } = await _supabase.from('rulepages').select('*').eq('name', pageName).single();
+    if (!pageData) { location.href = '?'; return; }
+
+    const pass = pageData.pass;
     // Generates full URL without the password hash for a cleaner link
     const viewLink = window.location.origin + window.location.pathname + '?view=' + encodeURIComponent(pageName);
     localStorage.setItem('currentPage', pageName);
@@ -115,20 +138,21 @@ function showEditPage(pageName) {
     loadLists(pageName);
 }
 
-function showViewPage(pageName, urlPass) {
-    const storedPass = localStorage.getItem(pageName + '_pass');
+async function showViewPage(pageName, urlPass) {
+    const { data: pageData } = await _supabase.from('rulepages').select('*').eq('name', pageName).single();
+    
     // If password isn't in URL hash, prompt the user for it
     let pass = urlPass || prompt('🔓 Enter password to view this rulepage:');
     
     if (pass === null) { location.href = '?'; return; } // Go home if canceled
 
-    if (!storedPass || pass !== storedPass) {
+    if (!pageData || pass !== pageData.pass) {
         document.querySelector('.container').innerHTML = '<h1 class="title" style="color:#ff1493;">🔒 LOCKED</h1><p class="subtitle">Wrong password, puppy!</p>';
         return;
     }
     
-    const rules = JSON.parse(localStorage.getItem(pageName + '_rules') || '[]');
-    const puns = JSON.parse(localStorage.getItem(pageName + '_puns') || '[]');
+    const rules = pageData.rules || [];
+    const puns = pageData.puns || [];
     
     document.querySelector('.container').innerHTML = `
         <div class="rule-page">
@@ -153,7 +177,8 @@ function showViewPage(pageName, urlPass) {
 }
 
 function addItem(type) {
-    const input = document.getElementById('new' + (type === 'rules' ? 'Rule' : 'Pun'));
+    const isRule = type === 'rules';
+    const input = document.getElementById('new' + (isRule ? 'Rule' : 'Pun'));
     const list = document.getElementById(type + 'List');
     if (!input || !list) return;
     
@@ -161,7 +186,7 @@ function addItem(type) {
     if (text) {
         const item = document.createElement('div');
         const currentPage = localStorage.getItem('currentPage');
-        item.className = type + '-item';
+        item.className = isRule ? 'rule-item' : 'punishment-item';
         item.innerHTML = `<span>${text}</span> <button class="remove-btn" onclick="this.parentElement.remove(); savePage('${currentPage}')">✕</button>`;
         list.appendChild(item);
         input.value = '';
@@ -169,21 +194,24 @@ function addItem(type) {
     }
 }
 
-function savePage(pageName, showAlert = false) {
+async function savePage(pageName, showAlert = false) {
     // More reliable selection using the span tag
     const rules = Array.from(document.querySelectorAll('#rulesList .rule-item span')).map(span => span.textContent.trim());
     const puns = Array.from(document.querySelectorAll('#punsList .punishment-item span')).map(span => span.textContent.trim());
     
-    localStorage.setItem(pageName + '_rules', JSON.stringify(rules));
-    localStorage.setItem(pageName + '_puns', JSON.stringify(puns));
+    await _supabase.from('rulepages').update({ rules, puns }).eq('name', pageName);
+    
     console.log('Saved ' + pageName);
     if (showAlert) alert('💖 Changes saved successfully, princess! ✨');
 }
 
-function loadLists(pageName) {
-    const rules = JSON.parse(localStorage.getItem(pageName + '_rules') || '[]');
-    const puns = JSON.parse(localStorage.getItem(pageName + '_puns') || '[]');
-    
+async function loadLists(pageName) {
+    const { data: pageData } = await _supabase.from('rulepages').select('rules, puns').eq('name', pageName).single();
+    if (!pageData) return;
+
+    const rules = pageData.rules || [];
+    const puns = pageData.puns || [];
+
     const rulesList = document.getElementById('rulesList');
     const punsList = document.getElementById('punsList');
     
